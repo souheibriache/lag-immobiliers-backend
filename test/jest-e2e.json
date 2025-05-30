@@ -1,0 +1,31 @@
+{
+  "moduleFileExtensions": [
+    "js",
+    "json",
+    "ts"
+  ],
+  "rootDir": ".",
+  "testEnvironment": "node",
+  "testRegex": ".e2e-spec.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "moduleNameMapper": {
+    "@app/base-entity/(.*)": "<rootDir>/../libs/base-entity/src/$1",
+    "@app/base-entity": "<rootDir>/../libs/base-entity/src",
+    "@app/common/(.*)": "<rootDir>/../libs/common/src/$1",
+    "@app/common": "<rootDir>/../libs/common/src",
+    "@app/config/(.*)": "<rootDir>/../libs/config/src/$1",
+    "@app/config": "<rootDir>/../libs/config/src",
+    "@app/database/(.*)": "<rootDir>/../libs/database/src/$1",
+    "@app/database": "<rootDir>/../libs/database/src",
+    "@app/mailer/(.*)": "<rootDir>/../libs/mailer/src/$1",
+    "@app/mailer": "<rootDir>/../libs/mailer/src",
+    "@app/media/(.*)": "<rootDir>/../libs/media/src/$1",
+    "@app/media": "<rootDir>/../libs/media/src",
+    "@app/pagination/(.*)": "<rootDir>/../libs/pagination/src/$1",
+    "@app/pagination": "<rootDir>/../libs/pagination/src",
+    "@app/upload/(.*)": "<rootDir>/../libs/upload/src/$1",
+    "@app/upload": "<rootDir>/../libs/upload/src"
+  }
+}
