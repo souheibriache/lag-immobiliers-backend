@@ -23,7 +23,7 @@ export class Accompaniement extends BaseEntity {
   @Column({ array: true, type: 'text' })
   characteristics: string[];
 
-  @ManyToMany(() => Media)
+  @ManyToMany(() => Media, { cascade: true })
   @JoinTable({ name: 'accompaniement_images' })
   images: Media[];
 

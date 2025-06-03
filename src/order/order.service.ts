@@ -1,12 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 import { Order } from './entities/order.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { Address } from 'src/address/entities/address.entity';
 import { Product } from 'src/product/entities/product.entity';
 import { RequestStatusEnum } from 'src/property-request/enums/request-status.enum';
+import { FilterOrderDto } from './dto/filter-order.dto';
+import { PaginatedOrderResponse } from './dto/paginated-order-response.dto';
 
 @Injectable()
 export class OrderService {
@@ -18,6 +20,91 @@ export class OrderService {
     @InjectRepository(Product)
     private readonly productRepo: Repository<Product>,
   ) {}
+
+  async getFilteredOrders(
+    filterDto: FilterOrderDto,
+  ): Promise<PaginatedOrderResponse> {
+    const queryBuilder = this.orderRepo
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.product', 'product')
+      .leftJoinAndSelect('order.address', 'address');
+
+    this.applyFilters(queryBuilder, filterDto);
+    this.applySorting(queryBuilder, filterDto);
+
+    const total = await queryBuilder.getCount();
+
+    const { page, limit } = filterDto;
+    const skip = (page - 1) * limit;
+
+    const items = await queryBuilder.skip(skip).take(limit).getMany();
+
+    const totalPages = Math.ceil(total / limit);
+    const hasNextPage = page < totalPages;
+    const hasPreviousPage = page > 1;
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages,
+      hasNextPage,
+      hasPreviousPage,
+    };
+  }
+
+  private applyFilters(
+    queryBuilder: SelectQueryBuilder<Order>,
+    filterDto: FilterOrderDto,
+  ): void {
+    const { search, status, productType, isPaid, productId, fromDate, toDate } =
+      filterDto;
+
+    if (search) {
+      queryBuilder.andWhere(
+        '(order.firstName ILIKE :search OR order.lastName ILIKE :search OR order.email ILIKE :search OR order.orderId ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    if (status) {
+      queryBuilder.andWhere('order.status = :status', { status });
+    }
+
+    if (productType) {
+      queryBuilder.andWhere('product.type = :productType', { productType });
+    }
+
+    if (isPaid !== undefined) {
+      queryBuilder.andWhere('order.isPaid = :isPaid', { isPaid });
+    }
+
+    if (productId) {
+      queryBuilder.andWhere('product.id = :productId', { productId });
+    }
+
+    if (fromDate) {
+      queryBuilder.andWhere('order.createdAt >= :fromDate', { fromDate });
+    }
+
+    if (toDate) {
+      queryBuilder.andWhere('order.createdAt <= :toDate', { toDate });
+    }
+  }
+
+  private applySorting(
+    queryBuilder: SelectQueryBuilder<Order>,
+    filterDto: FilterOrderDto,
+  ): void {
+    const { sortBy, sortOrder } = filterDto;
+
+    if (sortBy === 'firstName' || sortBy === 'lastName') {
+      queryBuilder.orderBy(`order.${sortBy}`, sortOrder);
+    } else {
+      queryBuilder.orderBy(`order.${sortBy}`, sortOrder);
+    }
+  }
 
   async createOrder(dto: CreateOrderDto): Promise<Order> {
     const product = await this.productRepo.findOneBy({ id: dto.productId });

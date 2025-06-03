@@ -14,6 +14,8 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { UpdateProductImagesDto } from './dto/update-product-images.dto';
 import { UpdateImageOrderDto } from './dto/image-order-item.dto';
 import { Media } from '@app/media/entities';
+import { ProductTypeEnum } from './enums/product-type.enum';
+import { ProductSearchDto } from './dto/product-search.dto';
 
 @Injectable()
 export class ProductService {
@@ -79,6 +81,62 @@ export class ProductService {
     order?: FindOptionsOrder<Product>,
   ) {
     return await this.productRepository.find({ where, relations, order });
+  }
+
+  async findByType(type: ProductTypeEnum, searchDto: ProductSearchDto = {}) {
+    const queryBuilder = this.productRepository
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.images', 'images')
+      .leftJoinAndSelect('product.category', 'category')
+      .where('product.type = :type', { type })
+      .orderBy('images.order', 'ASC');
+
+    if (searchDto.q) {
+      queryBuilder.andWhere(
+        '(LOWER(product.title) LIKE LOWER(:search) OR LOWER(product.description) LIKE LOWER(:search))',
+        { search: `%${searchDto.q}%` },
+      );
+    }
+
+    if (searchDto.categoryId) {
+      queryBuilder.andWhere('product.category_id = :categoryId', {
+        categoryId: searchDto.categoryId,
+      });
+    }
+
+    if (searchDto.isFeatured !== undefined) {
+      queryBuilder.andWhere('product.isFeatured = :isFeatured', {
+        isFeatured: searchDto.isFeatured,
+      });
+    }
+
+    if (searchDto.characteristic) {
+      queryBuilder.andWhere(':characteristic = ANY(product.characteristics)', {
+        characteristic: searchDto.characteristic,
+      });
+    }
+
+    if (searchDto.minPrice !== undefined) {
+      queryBuilder.andWhere('product.price >= :minPrice', {
+        minPrice: searchDto.minPrice,
+      });
+    }
+
+    if (searchDto.maxPrice !== undefined) {
+      queryBuilder.andWhere('product.price <= :maxPrice', {
+        maxPrice: searchDto.maxPrice,
+      });
+    }
+
+    if (searchDto.hasDiscount) {
+      queryBuilder.andWhere('product.discount > 0');
+    }
+
+    return await queryBuilder.getMany();
+  }
+
+  async getCategories() {
+    return await this.categoryRepository.find();
   }
 
   async findOne(

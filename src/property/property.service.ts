@@ -127,7 +127,7 @@ export class PropertyService {
     dto: UpdatePropertyDto,
     imageFiles?: Express.Multer.File[],
   ): Promise<Property> {
-    const existing = await this.findOne(id);
+    let existing = await this.findOne(id);
 
     if (dto.address) {
       await this.addressRepository.update(existing.address.id, dto.address);
@@ -141,7 +141,17 @@ export class PropertyService {
     });
 
     if (dto.price) {
-      await this.priceRepository.update(existing?.price?.id, dto.price);
+      if (existing?.price?.id)
+        await this.priceRepository.update(existing?.price?.id, dto.price);
+      else {
+        existing = await this.findOne(id);
+        const price = this.priceRepository.create({
+          ...dto.price,
+        });
+        const savedPrice = await this.priceRepository.save(price);
+        existing.price = savedPrice;
+        await existing.save();
+      }
     }
 
     if (dto.characteristics) {
@@ -153,9 +163,8 @@ export class PropertyService {
     }
 
     if (imageFiles) {
-      await this.imageRepository.delete({
-        id: In(existing.images.map((image) => image.id)),
-      });
+      existing = await this.findOne(id);
+
       const bucket = 'properties';
       for (let i = 0; i < imageFiles.length; i++) {
         const file = imageFiles[i];
@@ -167,6 +176,9 @@ export class PropertyService {
           originalName: upload.originalName,
           placeHolder: upload.placeHolder,
           resourceType: ResourceTypeEnum.AUTO,
+        });
+        await this.imageRepository.delete({
+          id: In(existing.images.map((image) => image.id)),
         });
         const img = this.imageRepository.create({
           ...media,
@@ -206,6 +218,17 @@ export class PropertyService {
   async remove(id: string): Promise<Property> {
     const prop = await this.findOne(id);
     return await this.propertyRepository.remove(prop);
+  }
+
+  async removeImage(propertyId, imageId) {
+    const property = await this.findOne(propertyId);
+    const imageToDelete = property.images.find((image) => image.id === imageId);
+    if (imageToDelete) {
+      property.images = property.images.filter((image) => image.id !== imageId);
+      await property.save();
+      await this.mediaService.delete(imageId);
+    }
+    return await this.findOne(propertyId);
   }
 
   async findFiltered(
@@ -264,7 +287,7 @@ export class PropertyService {
       items,
       total,
       page,
-      limit: take,
+      take,
       totalPages,
     };
   }

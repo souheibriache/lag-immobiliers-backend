@@ -23,6 +23,7 @@ import { PropertyRequestModule } from './property-request/property-request.modul
 import { AccompaniementModule } from './accompaniement/accompaniement.module';
 import { AccompagniementRequestModule } from './accompagniement-request/accompagniement-request.module';
 import { OrderModule } from './order/order.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { OrderModule } from './order/order.module';
     AccompaniementModule,
     AccompagniementRequestModule,
     OrderModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [

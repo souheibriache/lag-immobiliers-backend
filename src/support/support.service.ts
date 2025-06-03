@@ -19,7 +19,6 @@ import {
 import {
   AnswerSupportQuestionDto,
   PostQuestionVisitorDto,
-  SupportFilterDto,
   SupportOptionsDto,
 } from './dto';
 import { ISupport } from './interfaces/support.interface';
@@ -223,29 +222,34 @@ export class SupportService {
       sort,
       skip,
       take,
-      query = {} as SupportFilterDto,
+      answeredById,
+      email,
+      name,
+      subjects,
+      category,
+      isAnswered,
+      isSeen,
     } = supportOptionsDto;
 
     const relations: FindOptionsRelations<Support> = {
       answeredBy: true,
       attachments: true,
-      askedBy: true,
       questionAttachments: true,
     };
     //Todo complete those after having the requirement
 
-    if (query.answeredById)
+    if (answeredById)
       where.answeredBy = {
-        id: query.answeredById,
+        id: answeredById,
       };
-    if (query.email) where.email = ILike(`%${query.email}%`);
-    if (query.name) where.firstName = ILike(`%${query.name}%`);
-    if (query.subjects) where.subject = In(query.subjects);
-    if (query.category) where.category = In(query.category);
-    if (query.isSeen === true || query.isSeen === false)
-      where.seenAt = query.isSeen ? Not(IsNull()) : IsNull();
-    if (query.isAnswered === true || query.isAnswered === false)
-      where.answeredAt = query.isAnswered ? Not(IsNull()) : IsNull();
+    if (email) where.email = ILike(`%${email}%`);
+    if (name) where.firstName = ILike(`%${name}%`);
+    if (subjects) where.subject = In(subjects);
+    if (category) where.category = In(category);
+    if (isSeen === true || isSeen === false)
+      where.seenAt = isSeen ? Not(IsNull()) : IsNull();
+    if (isAnswered === true || isAnswered === false)
+      where.answeredAt = isAnswered ? Not(IsNull()) : IsNull();
 
     const [items, itemCount] = await this.supportRepository.findAndCount({
       where,

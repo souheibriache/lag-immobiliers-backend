@@ -34,6 +34,12 @@ export class Product extends BaseEntity {
   })
   type: ProductTypeEnum;
 
+  @Column({ type: 'float', default: 0 })
+  price: number;
+
+  @Column({ default: 0, type: 'float' })
+  discount: number;
+
   @ManyToMany(() => Media)
   @JoinTable({ name: 'product_images' })
   images: Media[];

@@ -10,18 +10,30 @@ import {
   HttpStatus,
   ParseUUIDPipe,
   Put,
+  Query,
 } from '@nestjs/common';
-import { ApiTags, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiResponse, ApiOperation } from '@nestjs/swagger';
 import { OrderService } from './order.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { Order } from './entities/order.entity';
 import { RequestStatusEnum } from 'src/property-request/enums/request-status.enum';
+import { PaginatedOrderResponse } from './dto/paginated-order-response.dto';
+import { FilterOrderDto } from './dto/filter-order.dto';
 
 @ApiTags('orders')
 @Controller('orders')
 export class OrderController {
   constructor(private readonly service: OrderService) {}
+
+  @Get('filter')
+  @ApiOperation({ summary: 'Obtenir les commandes filtrées avec pagination' })
+  @ApiResponse({ status: 200, type: PaginatedOrderResponse })
+  async getFilteredOrders(
+    @Query() filterDto: FilterOrderDto,
+  ): Promise<PaginatedOrderResponse> {
+    return this.service.getFilteredOrders(filterDto);
+  }
 
   @Post()
   @ApiResponse({ status: 201, type: Order })

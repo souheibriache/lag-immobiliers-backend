@@ -100,6 +100,14 @@ export class PropertyController {
     return this.propertyService.reorder(dto);
   }
 
+  @Delete('/:propertyId/images/:imageId')
+  async deleteImage(
+    @Param('propertyId') propertyId: string,
+    @Param('imageId') imageId: string,
+  ) {
+    return await this.propertyService.removeImage(propertyId, imageId);
+  }
+
   @Delete(':id')
   remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     return this.propertyService.remove(id).then(() => {});

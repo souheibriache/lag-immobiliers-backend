@@ -71,7 +71,7 @@ export class AccompaniementController {
   @ApiResponse({ status: 200, type: Accompaniement })
   update(
     @Param('id', ParseUUIDPipe) id: string,
-    dto: UpdateAccompaniementDto,
+    @Body() dto: UpdateAccompaniementDto,
     @UploadedFiles(
       new ParseFilePipe({
         validators: [
@@ -96,6 +96,14 @@ export class AccompaniementController {
   @ApiResponse({ status: 200, type: [Accompaniement] })
   reorder(@Body() dto: ReorderAccompaniementsDto): Promise<Accompaniement[]> {
     return this.service.reorder(dto);
+  }
+
+  @Delete('/:accompagniementId/images/:imageId')
+  async deleteImage(
+    @Param('accompagniementId') accompagniementId: string,
+    @Param('imageId') imageId: string,
+  ) {
+    return await this.service.removeImage(accompagniementId, imageId);
   }
 
   @Delete(':id')

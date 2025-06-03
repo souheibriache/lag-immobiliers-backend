@@ -13,6 +13,7 @@ import {
   HttpStatus,
   BadRequestException,
   Put,
+  Query,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import {
@@ -29,6 +30,8 @@ import { Product } from './entities/product.entity';
 import { MEDIA_TYPES } from '@app/upload/constants/file.types';
 import { UpdateImageOrderDto } from './dto/image-order-item.dto';
 import { Media } from '@app/media/entities';
+import { ProductSearchDto } from './dto/product-search.dto';
+import { ProductTypeEnum } from './enums/product-type.enum';
 
 @ApiTags('products')
 @Controller('products')
@@ -61,6 +64,23 @@ export class ProductController {
     return this.service.find();
   }
 
+  @Get('books')
+  @ApiResponse({ status: 200, type: [Product] })
+  findAllBooks(@Query() searchDto: ProductSearchDto): Promise<Product[]> {
+    return this.service.findByType(ProductTypeEnum.BOOK, searchDto);
+  }
+
+  @Get('products')
+  @ApiResponse({ status: 200, type: [Product] })
+  findAllProducts(@Query() searchDto: ProductSearchDto): Promise<Product[]> {
+    return this.service.findByType(ProductTypeEnum.PRODUCT, searchDto);
+  }
+
+  @Get('categories')
+  async getCategories() {
+    return await this.service.getCategories();
+  }
+
   @Get(':id')
   @ApiResponse({ status: 200, type: Product })
   findOneById(@Param('id', ParseUUIDPipe) id: string): Promise<Product> {
@@ -71,7 +91,7 @@ export class ProductController {
   @ApiResponse({ status: 200, type: Product })
   update(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateProductDto,
+    dto: UpdateProductDto,
   ): Promise<Product> {
     return this.service.update(id, dto);
   }

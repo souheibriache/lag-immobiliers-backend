@@ -11,7 +11,7 @@ export class PaginatedResponseDto<T> {
   page: number;
 
   @ApiProperty()
-  limit: number;
+  take: number;
 
   @ApiProperty()
   totalPages: number;

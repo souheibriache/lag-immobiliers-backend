@@ -105,33 +105,46 @@ export class AccompaniementService {
     dto: UpdateAccompaniementDto,
     imageFiles?: Express.Multer.File[],
   ): Promise<Accompaniement> {
-    const ent = await this.findOne(id);
-    Object.assign(ent, dto);
+    await this.findOne(id);
+    if (dto)
+      await this.repo.update(id, {
+        title: dto.title,
+        description: dto.description,
+        shortDescription: dto.shortDescription,
+        characteristics: dto.characteristics,
+        price: dto.price,
+        order: dto.order,
+      });
+
+    let existing = await this.findOne(id);
 
     if (imageFiles) {
-      ent.images = [];
-      await this.repo.save(ent);
-
-      const uploads = await this.uploadService.uploadMany(
-        imageFiles,
-        'accompaniement',
-      );
-      const medias = [];
-      for (let i = 0; i < uploads.length; i++) {
-        const u = uploads[i];
-        const m = await this.mediaService.create({
-          fullUrl: u.fullUrl,
-          name: u.name,
-          originalName: u.originalName,
-          placeHolder: u.placeHolder,
+      existing = await this.findOne(id);
+      const bucket = 'accompaniement';
+      for (let i = 0; i < imageFiles.length; i++) {
+        const file = imageFiles[i];
+        const upload = await this.uploadService.upload(file, bucket);
+        if (!upload) throw new InternalServerErrorException('Upload failed');
+        const media = await this.mediaService.create({
+          fullUrl: upload.fullUrl,
+          name: upload.name,
+          originalName: upload.originalName,
+          placeHolder: upload.placeHolder,
           resourceType: ResourceTypeEnum.AUTO,
         });
-        medias.push(m);
+        await this.mediaRepo.delete({
+          id: In(existing.images.map((image) => image.id)),
+        });
+        const img = this.mediaRepo.create({
+          ...media,
+          order: i,
+        });
+        existing.images.push(await this.mediaRepo.save(img));
       }
-      ent.images = await this.mediaRepo.save(medias);
+      await existing.save();
     }
 
-    return this.repo.save(ent);
+    return this.repo.save(existing);
   }
 
   async reorder(dto: ReorderAccompaniementsDto): Promise<Accompaniement[]> {
@@ -152,6 +165,17 @@ export class AccompaniementService {
     await Promise.all(
       items.map(({ id, order }) => this.mediaRepo.update(id, { order })),
     );
+  }
+
+  async removeImage(propertyId, imageId) {
+    const property = await this.findOne(propertyId);
+    const imageToDelete = property.images.find((image) => image.id === imageId);
+    if (imageToDelete) {
+      property.images = property.images.filter((image) => image.id !== imageId);
+      await property.save();
+      await this.mediaService.delete(imageId);
+    }
+    return await this.findOne(propertyId);
   }
 
   async delete(id: string): Promise<void> {
