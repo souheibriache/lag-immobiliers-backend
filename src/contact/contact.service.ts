@@ -42,7 +42,7 @@ export class ContactService {
   async update(dto: UpdateContactDto): Promise<Contact> {
     const contact = await this.getContact();
     const { address, whatsAppGroups, ...rest } = dto;
-
+    console.log({ dto });
     await this.contactRepo.update(contact.id, rest);
 
     if (address) {

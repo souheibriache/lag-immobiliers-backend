@@ -17,8 +17,4 @@ export class WhatsappGroup extends BaseEntity {
 
   @Column()
   url: string;
-
-  @OneToOne(() => Media)
-  @JoinColumn({ name: 'image_id', referencedColumnName: 'id' })
-  image: Media;
 }

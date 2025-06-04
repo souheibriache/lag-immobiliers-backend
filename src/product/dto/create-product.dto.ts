@@ -32,6 +32,7 @@ export class CreateProductDto {
 
   @ApiProperty({ enum: ProductTypeEnum, default: ProductTypeEnum.PRODUCT })
   @IsEnum(ProductTypeEnum)
+  @Transform(({ value }: { value: string }) => value.toUpperCase())
   type: ProductTypeEnum;
 
   @ApiProperty()
@@ -48,8 +49,8 @@ export class CreateProductDto {
   @ApiPropertyOptional({ default: false })
   @IsBoolean()
   @Transform(({ value }) => {
-    if (value === 'true') return true;
-    if (value === 'false') return false;
+    if (value || value === 'true') return true;
+    if (value === false || value === 'false') return false;
   })
   isFeatured?: boolean = false;
 
@@ -57,7 +58,9 @@ export class CreateProductDto {
   @IsArray()
   @ArrayNotEmpty()
   @ArrayUnique()
-  @Transform(({ value }) => JSON.parse(value))
+  @Transform(({ value }) => {
+    return Array.isArray(value) ? value : JSON.parse(value);
+  })
   @IsString({ each: true })
   characteristics: string[];
 
@@ -65,7 +68,6 @@ export class CreateProductDto {
     type: String,
   })
   @IsOptional()
-  @Transform(({ value }: { value: string }) => value.toUpperCase())
   @IsString()
   category?: string;
 }

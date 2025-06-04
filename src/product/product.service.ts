@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   FindOptionsOrder,
   FindOptionsRelations,
@@ -16,6 +20,9 @@ import { UpdateImageOrderDto } from './dto/image-order-item.dto';
 import { Media } from '@app/media/entities';
 import { ProductTypeEnum } from './enums/product-type.enum';
 import { ProductSearchDto } from './dto/product-search.dto';
+import { ResourceTypeEnum } from '@app/media/enums/resource-type.enum';
+import { CreateCategoryDto } from './dto/create-category.dto';
+import { MediaService } from '@app/media';
 
 @Injectable()
 export class ProductService {
@@ -27,6 +34,7 @@ export class ProductService {
     @InjectRepository(Category)
     private readonly categoryRepository: Repository<Category>,
     private readonly uploadService: UploadService,
+    private readonly mediaService: MediaService,
   ) {}
 
   async create(
@@ -42,15 +50,16 @@ export class ProductService {
       images,
       'products',
     );
+    console.log({ uploadedFiles });
 
     const productImages = uploadedFiles.map((image, index) =>
       this.productImageRepository.create({
-        fullUrl: image.url,
+        fullUrl: image.fullUrl,
         order: index,
-        originalName: image.original_filename,
-        name: image.display_name,
-        placeHolder: image.placeholder,
-        resourceType: image.resource_type,
+        originalName: image.originalName,
+        name: image.name,
+        placeHolder: image.placeHolder,
+        resourceType: ResourceTypeEnum.IMAGE,
       }),
     );
 
@@ -139,26 +148,43 @@ export class ProductService {
     return await this.categoryRepository.find();
   }
 
-  async findOne(
-    where?: FindOptionsWhere<Product>,
-    relations?: FindOptionsRelations<Product>,
-    order?: FindOptionsOrder<Product>,
-  ) {
-    const product = await this.productRepository.findOne({
-      where,
-      relations,
-      order,
+  async deleteCategory(categoryId: string) {
+    const category = await this.categoryRepository.findOne({
+      where: { id: categoryId },
     });
-    if (!product) throw new NotFoundException('Product not found!');
+    if (!category) throw new NotFoundException('Category not found:');
+    return await this.categoryRepository.remove(category);
+  }
 
+  async createCategory(dto: CreateCategoryDto) {
+    const category = this.categoryRepository.create(dto);
+    return await this.categoryRepository.save(category);
+  }
+
+  async findOne(id: string): Promise<Product> {
+    const product = await this.productRepository.findOne({
+      where: { id },
+      relations: {
+        images: true,
+        category: true,
+      },
+      order: {
+        images: {
+          order: 'ASC',
+        },
+      },
+    });
+    if (!product) throw new NotFoundException(`Product ${id} not found`);
     return product;
   }
 
-  async update(id: string, updateProductDto: UpdateProductDto) {
-    const product = await this.findOne(
-      { id },
-      { images: true, category: true },
-    );
+  async update(
+    id: string,
+    updateProductDto: UpdateProductDto,
+    imageFiles?: Express.Multer.File[],
+  ) {
+    let product = await this.findOne(id);
+
     const { category, ...rest } = updateProductDto;
     await this.productRepository.update(id, rest);
 
@@ -170,67 +196,41 @@ export class ProductService {
       await this.productRepository.save(product);
     }
 
-    return await this.findOne({ id }, { images: true, category: true });
-  }
+    if (imageFiles) {
+      product = await this.findOne(id);
 
-  async updateImages(
-    id: string,
-    updateProductImagesDto: UpdateProductImagesDto,
-    images: Express.Multer.File[],
-  ) {
-    const product = await this.findOne({ id }, { images: true });
-
-    const retainedImageIds = Array.isArray(
-      updateProductImagesDto.retainedImageIds,
-    )
-      ? updateProductImagesDto.retainedImageIds
-      : updateProductImagesDto.retainedImageIds
-        ? [updateProductImagesDto.retainedImageIds]
-        : [];
-
-    const retainedImages = product.images.filter((image) =>
-      retainedImageIds.includes(image.id),
-    );
-
-    const imagesToDelete = product.images.filter(
-      (image) => !retainedImageIds.includes(image.id),
-    );
-
-    if (imagesToDelete.length > 0) {
-      await this.productImageRepository.remove(imagesToDelete);
+      const bucket = 'products';
+      for (let i = 0; i < imageFiles.length; i++) {
+        const file = imageFiles[i];
+        const upload = await this.uploadService.upload(file, bucket);
+        if (!upload) throw new InternalServerErrorException('Upload failed');
+        const media = await this.mediaService.create({
+          fullUrl: upload.fullUrl,
+          name: upload.name,
+          originalName: upload.originalName,
+          placeHolder: upload.placeHolder,
+          resourceType: ResourceTypeEnum.AUTO,
+        });
+        await this.productImageRepository.delete({
+          id: In(product.images.map((image) => image.id)),
+        });
+        const img = this.productImageRepository.create({
+          ...media,
+          order: i,
+        });
+        product.images.push(await this.productImageRepository.save(img));
+      }
+      await product.save();
     }
 
-    const uploadedFiles = await this.uploadService.uploadMany(
-      images,
-      'products',
-    );
-
-    const newImages = uploadedFiles.map((image, index) =>
-      this.productImageRepository.create({
-        fullUrl: image.url,
-        order: retainedImages.length + index,
-        originalName: image.original_filename,
-        name: image.display_name,
-        placeHolder: image.placeholder,
-        resourceType: image.resource_type,
-      }),
-    );
-
-    if (newImages.length > 0) {
-      await this.productImageRepository.save(newImages);
-    }
-
-    const allImages = [...retainedImages, ...newImages];
-    product.images = allImages;
-
-    return await this.productRepository.save(product);
+    return await this.findOne(id);
   }
 
   async updateImagesOrder(
     id: string,
     updateImageOrderDto: UpdateImageOrderDto,
   ) {
-    const product = await this.findOne({ id }, { images: true });
+    const product = await this.findOne(id);
 
     const imageMap = new Map(product.images.map((image) => [image.id, image]));
 
@@ -246,23 +246,16 @@ export class ProductService {
 
     await this.productImageRepository.save([...imageMap.values()]);
 
-    return await this.findOne(
-      { id },
-      { images: true },
-      { images: { order: 'ASC' } },
-    );
+    return await this.findOne(id);
   }
 
   async delete(id: string) {
-    await this.findOne({ id });
-
-    await this.productRepository.delete(id);
-
-    return true;
+    const product = await this.findOne(id);
+    return await this.productRepository.remove(product);
   }
 
   async deleteImage(id: string, imageId: string) {
-    const product = await this.findOne({ id }, { images: true });
+    const product = await this.findOne(id);
 
     const imageExists = product.images.some((image) => image.id === imageId);
     if (!imageExists) {

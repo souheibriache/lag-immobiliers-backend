@@ -32,6 +32,7 @@ import { UpdateImageOrderDto } from './dto/image-order-item.dto';
 import { Media } from '@app/media/entities';
 import { ProductSearchDto } from './dto/product-search.dto';
 import { ProductTypeEnum } from './enums/product-type.enum';
+import { CreateCategoryDto } from './dto/create-category.dto';
 
 @ApiTags('products')
 @Controller('products')
@@ -76,6 +77,16 @@ export class ProductController {
     return this.service.findByType(ProductTypeEnum.PRODUCT, searchDto);
   }
 
+  @Post('categories')
+  async createCategory(@Body() dto: CreateCategoryDto) {
+    return await this.service.createCategory(dto);
+  }
+
+  @Delete('categories/:categoryId')
+  async deleteCategory(@Param('categoryId') categoryId: string) {
+    return await this.service.deleteCategory(categoryId);
+  }
+
   @Get('categories')
   async getCategories() {
     return await this.service.getCategories();
@@ -84,25 +95,16 @@ export class ProductController {
   @Get(':id')
   @ApiResponse({ status: 200, type: Product })
   findOneById(@Param('id', ParseUUIDPipe) id: string): Promise<Product> {
-    return this.service.findOne({ id }, { images: true, category: true });
+    return this.service.findOne(id);
   }
 
-  @Put(':id')
+  @Put('/:id')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FilesInterceptor('images'))
   @ApiResponse({ status: 200, type: Product })
   update(
+    @Body() dto: UpdateProductDto,
     @Param('id', ParseUUIDPipe) id: string,
-    dto: UpdateProductDto,
-  ): Promise<Product> {
-    return this.service.update(id, dto);
-  }
-
-  @Put(':id/images')
-  @UseInterceptors(FilesInterceptor('images'))
-  @ApiConsumes('multipart/form-data')
-  @ApiResponse({ status: 200, type: Product })
-  updateImages(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateProductImagesDto,
     @UploadedFiles(
       new ParseFilePipe({
         validators: [
@@ -114,7 +116,7 @@ export class ProductController {
     )
     images?: Express.Multer.File[],
   ): Promise<Product> {
-    return this.service.updateImages(id, dto, images || []);
+    return this.service.update(id, dto, images);
   }
 
   @Put(':id/images/order')
@@ -131,11 +133,11 @@ export class ProductController {
     @Param('id', ParseUUIDPipe) id: string,
     @Param('imageId', ParseUUIDPipe) imageId: string,
   ) {
-    return this.service.deleteImage(id, imageId).then(() => {});
+    return this.service.deleteImage(id, imageId);
   }
 
   @Delete(':id')
-  delete(@Param('id', ParseUUIDPipe) id: string) {
-    return this.service.delete(id).then(() => {});
+  async delete(@Param('id', ParseUUIDPipe) id: string) {
+    return await this.service.delete(id);
   }
 }

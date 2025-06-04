@@ -40,7 +40,7 @@ export class Product extends BaseEntity {
   @Column({ default: 0, type: 'float' })
   discount: number;
 
-  @ManyToMany(() => Media)
+  @ManyToMany(() => Media, { cascade: true })
   @JoinTable({ name: 'product_images' })
   images: Media[];
 

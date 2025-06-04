@@ -109,7 +109,7 @@ export class PropertyController {
   }
 
   @Delete(':id')
-  remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
-    return this.propertyService.remove(id).then(() => {});
+  remove(@Param('id', ParseUUIDPipe) id: string): Promise<Property> {
+    return this.propertyService.remove(id);
   }
 }
