@@ -51,14 +51,15 @@ export class PropertyService {
       isFeatured: dto.isFeatured ?? false,
       address,
     });
-    await this.propertyRepository.save(property);
-
+    const savedProperty = await this.propertyRepository.save(property);
+    console.log({ price: dto.price });
     const price = this.priceRepository.create({
       ...dto.price,
     });
+    console.log({ createdPrice: price });
     const savedPrice = await this.priceRepository.save(price);
     property.price = savedPrice;
-    await price.save();
+    await savedProperty.save();
 
     if (dto.characteristics?.length) {
       const chars = dto.characteristics.map((characteristic) =>
@@ -90,8 +91,8 @@ export class PropertyService {
         });
         imgs.push(img);
       }
-      property.images = await this.imageRepository.save(imgs);
-      await property.save();
+      savedProperty.images = await this.imageRepository.save(imgs);
+      await savedProperty.save();
     }
 
     return this.findOne(property.id);

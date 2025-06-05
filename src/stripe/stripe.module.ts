@@ -10,7 +10,7 @@ import Stripe from 'stripe';
       provide: 'STRIPE_CLIENT',
       useFactory: (configService: ConfigService) => {
         return new Stripe(configService.get<string>('STRIPE_SECRET_KEY'), {
-          apiVersion: '2025-04-30.basil',
+          apiVersion: '2025-05-28.basil',
         });
       },
       inject: [ConfigService],

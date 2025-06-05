@@ -27,7 +27,7 @@ export class PropertyRequestController {
 
   @Post()
   @ApiResponse({ status: 201, type: PropertyRequest })
-  create(dto: CreatePropertyRequestDto) {
+  create(@Body() dto: CreatePropertyRequestDto) {
     return this.propertyRequestService.create(dto);
   }
 
@@ -62,7 +62,7 @@ export class PropertyRequestController {
   @ApiResponse({ status: 200, type: PropertyRequest })
   updateStatus(
     @Param('id', ParseUUIDPipe) id: string,
-    dto: UpdatePropertyRequestStatusDto,
+    @Body() dto: UpdatePropertyRequestStatusDto,
   ) {
     return this.propertyRequestService.updateStatus(id, dto);
   }

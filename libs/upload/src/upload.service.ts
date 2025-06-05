@@ -1,7 +1,15 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import * as Minio from 'minio';
 import { ConfigService } from '@app/config';
 import * as crypto from 'crypto';
+import {
+  BucketNamesEnum,
+  minioBucketPolicy,
+} from '@app/common/utils/constants/buckets';
 
 @Injectable()
 export class UploadService {
@@ -17,6 +25,34 @@ export class UploadService {
       secretKey: this.configService.get('MINIO_SECRET_KEY'),
     });
     this.bucketName = this.configService.get('MINIO_BUCKET_NAME');
+    this.initializeMinio();
+  }
+
+  async initializeMinio() {
+    const buckets = await this.minioClient.listBuckets();
+    const minioBuckets = buckets.map((bucket) => bucket.name);
+    const localBuckets = Object.values(BucketNamesEnum);
+    const missingBuckets = localBuckets.filter(
+      (bucket) => !minioBuckets.includes(bucket),
+    );
+    if (!missingBuckets.length) return;
+
+    console.log({ missingBuckets, localBuckets, minioBuckets });
+    for (const bucket of missingBuckets) {
+      await this.minioClient
+        .makeBucket(bucket, 'eu-west-1', {
+          ObjectLocking: false,
+        })
+        .then(async () => {
+          console.log('BUCKET CREATED');
+          await this.minioClient.setBucketPolicy(
+            bucket,
+            JSON.stringify(minioBucketPolicy(bucket)),
+          );
+        })
+        .catch((err) => console.error(err));
+      Logger.log(`BUCKET ${bucket} INITIALIZED SUCCESSFULLY!`);
+    }
   }
 
   async createBucketIfNotExists(bucketName: string) {

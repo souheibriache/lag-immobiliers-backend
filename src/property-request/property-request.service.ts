@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { PropertyRequest } from './entities/property-request.entity';
 import { CreatePropertyRequestDto } from './dto/create-property-request.dto';
 import { RequestStatusEnum } from './enums/request-status.enum';
@@ -23,15 +23,28 @@ export class PropertyRequestService {
     const { email, phoneNumber } = dto;
     const trimmedEmail = email.trim();
     const trimmedPhone = phoneNumber.trim();
+    const propertyRequestForbiddenStatus = [
+      RequestStatusEnum.PENDING,
+      RequestStatusEnum.ACCEPTED,
+      RequestStatusEnum.REJECTED,
+    ];
     const existing = await this.requestRepository.findOne({
       where: [
-        { phoneNumber: trimmedPhone, status: RequestStatusEnum.PENDING },
-        { email: trimmedEmail, status: RequestStatusEnum.PENDING },
+        {
+          phoneNumber: trimmedPhone,
+          status: In(propertyRequestForbiddenStatus),
+          property: { id: dto.propertyId },
+        },
+        {
+          email: trimmedEmail,
+          status: In(propertyRequestForbiddenStatus),
+          property: { id: dto.propertyId },
+        },
       ],
     });
     if (existing)
       throw new BadRequestException(
-        'Vous avez deja une demande avec cet address mail ou ce numero de telephone',
+        'Vous avez déjà une demande avec cette adresse mail ou ce numéro de téléphone pour ce bien.',
       );
 
     const request = this.requestRepository.create({

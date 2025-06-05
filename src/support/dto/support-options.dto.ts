@@ -48,13 +48,13 @@ export class SupportOptionsDto extends PageOptionsDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsBoolean()
-  @Transform(({ value }) => value === 'true' || value)
+  @Transform(({ value }) => value === 'true')
   readonly isSeen?: boolean;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsBoolean()
-  @Transform(({ value }) => value === 'true' || value)
+  @Transform(({ value }) => value === 'true')
   readonly isAnswered?: boolean;
 
   @ApiPropertyOptional()

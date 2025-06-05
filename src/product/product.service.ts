@@ -183,11 +183,13 @@ export class ProductService {
     updateProductDto: UpdateProductDto,
     imageFiles?: Express.Multer.File[],
   ) {
-    let product = await this.findOne(id);
+    console.log({ updateProductDto });
+    await this.findOne(id);
 
     const { category, ...rest } = updateProductDto;
     await this.productRepository.update(id, rest);
 
+    let product = await this.findOne(id);
     if (updateProductDto.category) {
       const newCategory = await this.categoryRepository.findOne({
         where: { id: updateProductDto.category },

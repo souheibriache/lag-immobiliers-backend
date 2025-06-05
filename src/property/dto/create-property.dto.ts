@@ -37,7 +37,7 @@ export class CreatePropertyDto {
     if (value === 'true') return true;
     if (value === 'false') return false;
   })
-  isFeatured?: boolean = false;
+  isFeatured?: boolean;
 
   @ApiProperty({ type: AddressDto })
   @Transform(({ value }) => JSON.parse(value))
